@@ -634,6 +634,12 @@ class _VideoPlayerState extends State<VideoPlayer> {
 
   late int _textureId;
 
+  void _deregisterListeners(VideoPlayerController controller)  {
+    if (!controller._isDisposed) {
+      widget.controller.removeListener(_listener);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -646,7 +652,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
   @override
   void didUpdateWidget(VideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.controller.removeListener(_listener);
+    _deregisterListeners(oldWidget.controller);
     _textureId = widget.controller.textureId;
     widget.controller.addListener(_listener);
   }
@@ -654,7 +660,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
   @override
   void deactivate() {
     super.deactivate();
-    widget.controller.removeListener(_listener);
+    _deregisterListeners(widget.controller);
   }
 
   @override
