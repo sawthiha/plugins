@@ -23,7 +23,7 @@ class _App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 1,
       child: Scaffold(
         key: const ValueKey<String>('home_page'),
         appBar: AppBar(
@@ -49,16 +49,16 @@ class _App extends StatelessWidget {
                 icon: Icon(Icons.cloud),
                 text: "Remote",
               ),
-              Tab(icon: Icon(Icons.insert_drive_file), text: "Asset"),
-              Tab(icon: Icon(Icons.list), text: "List example"),
+              // Tab(icon: Icon(Icons.insert_drive_file), text: "Asset"),
+              // Tab(icon: Icon(Icons.list), text: "List example"),
             ],
           ),
         ),
         body: TabBarView(
           children: <Widget>[
             _BumbleBeeRemoteVideo(),
-            _ButterFlyAssetVideo(),
-            _ButterFlyAssetVideoInList(),
+            // _ButterFlyAssetVideo(),
+            // _ButterFlyAssetVideoInList(),
           ],
         ),
       ),
@@ -214,25 +214,30 @@ class _BumbleBeeRemoteVideoState extends State<_BumbleBeeRemoteVideo> {
     return SubRipCaptionFile(fileContents);
   }
 
+  void onControllerUpdated()  {
+    setState(() {
+      
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _controller = VideoPlayerController.network(
+      // 'https://video-nrt1-1.xx.fbcdn.net/v/t42.1790-29/10000000_752780925586087_5809100380668089021_n.mp4?_nc_cat=106&ccb=1-5&_nc_sid=5aebc0&efg=eyJ2ZW5jb2RlX3RhZyI6ImRhc2hfbGl2ZV9oZDFfZnJhZ18yX3ZpZGVvIn0=&_nc_ohc=W4lghULSu7kAX8K8Qx4&_nc_ht=video-nrt1-1.xx&oh=c382c2d5242f49f3c81954fafaaa8611&oe=619FCD47',
       'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
       closedCaptionFile: _loadCaptions(),
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
 
-    _controller.addListener(() {
-      setState(() {});
-    });
+    _controller.addListener(onControllerUpdated);
     _controller.setLooping(true);
-    _controller.initialize();
+    // _controller.initialize();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.removeListener(onControllerUpdated);
     super.dispose();
   }
 
@@ -242,7 +247,19 @@ class _BumbleBeeRemoteVideoState extends State<_BumbleBeeRemoteVideo> {
       child: Column(
         children: <Widget>[
           Container(padding: const EdgeInsets.only(top: 20.0)),
-          const Text('With remote mp4'),
+          InkWell(
+            onTap: ()  {
+              showDialog(context: context, builder: (context) => AlertDialog(
+                content: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Container(),
+                  ),
+                )
+              );
+            },
+            child: const Text('With remote mp4')
+          ),
           Container(
             padding: const EdgeInsets.all(20),
             child: AspectRatio(
@@ -250,7 +267,18 @@ class _BumbleBeeRemoteVideoState extends State<_BumbleBeeRemoteVideo> {
               child: Stack(
                 alignment: Alignment.bottomCenter,
                 children: <Widget>[
-                  VideoPlayer(_controller),
+                  Column(
+                    children: [
+                      SizedBox(
+                        height: 200,
+                        child: VideoPlayer(_controller)
+                      ),
+                      SizedBox(
+                        height: 200,
+                        child: VideoPlayer(_controller),
+                      ),
+                    ],
+                  ),
                   ClosedCaption(text: _controller.value.caption.text),
                   _ControlsOverlay(controller: _controller),
                   VideoProgressIndicator(_controller, allowScrubbing: true),

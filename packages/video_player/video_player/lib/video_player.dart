@@ -286,7 +286,6 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
 
   ClosedCaptionFile? _closedCaptionFile;
   Timer? _timer;
-  bool _isDisposed = false;
   Completer<void>? _creatingCompleter;
   StreamSubscription<dynamic>? _eventSubscription;
   late _VideoAppLifeCycleObserver _lifeCycleObserver;
@@ -301,8 +300,32 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   @visibleForTesting
   int get textureId => _textureId;
 
-  /// Whether the video contoller is disposed
-  bool get isDisposed => _isDisposed;
+  // Represent the controller state
+  // true on valid state, otherwise (disposed) false
+  final ValueNotifier<bool> _stateNotifier = ValueNotifier(true);
+
+  /// Whether the video contoller is dispose
+  bool get isValid => _stateNotifier.value;
+
+  // List<VoidCallback> _listeners = [];
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    // _listeners.add(listener);
+    // if (_listeners.length == 1) {
+      // initialize();
+    // }
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    // _listeners.remove(listener);
+    // if (_listeners.isEmpty) {
+      // dispose();
+    // }
+  }
 
   /// Attempts to open the given [dataSource] and load metadata about the video.
   Future<void> initialize() async {
@@ -352,7 +375,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
     final Completer<void> initializingCompleter = Completer<void>();
 
     void eventListener(VideoEvent event) {
-      if (_isDisposed) {
+      if (!isValid) {
         return;
       }
 
@@ -415,15 +438,18 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   Future<void> dispose() async {
     if (_creatingCompleter != null) {
       await _creatingCompleter!.future;
-      if (!_isDisposed) {
-        _isDisposed = true;
+      if (isValid) {
+        _stateNotifier.value = false;
         _timer?.cancel();
         await _eventSubscription?.cancel();
         await _videoPlayerPlatform.dispose(_textureId);
+        _textureId = kUninitializedTextureId;
+        if (hasListeners) {
+          notifyListeners();
+        }
       }
       _lifeCycleObserver.dispose();
     }
-    _isDisposed = true;
     super.dispose();
   }
 
@@ -474,7 +500,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
       _timer = Timer.periodic(
         Duration(milliseconds: positionUpdateInterval),
         (Timer timer) async {
-          if (_isDisposed) {
+          if (!isValid) {
             return;
           }
           final Duration? newPosition = await position;
@@ -520,7 +546,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
 
   /// The position in the current video.
   Future<Duration?> get position async {
-    if (_isDisposed) {
+    if (!isValid) {
       return null;
     }
     return await _videoPlayerPlatform.getPosition(_textureId);
@@ -614,7 +640,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
     value = value.copyWith(caption: _getCaptionAt(position));
   }
 
-  bool get _isDisposedOrNotInitialized => _isDisposed || !value.isInitialized;
+  bool get _isDisposedOrNotInitialized => !isValid || !value.isInitialized;
 }
 
 class _VideoAppLifeCycleObserver extends Object with WidgetsBindingObserver {
@@ -678,7 +704,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
   late int _textureId;
 
   void _deregisterListeners(VideoPlayerController controller)  {
-    if (!controller._isDisposed) {
+    if (controller.isValid) {
       widget.controller.removeListener(_listener);
     }
   }
